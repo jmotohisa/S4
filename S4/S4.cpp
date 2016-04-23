@@ -52,6 +52,11 @@ void* S4_malloc(size_t size){ // for debugging
 	//memset(ret, 0x0, size);
 	return ret;
 }
+void* S4_realloc(void *ptr, size_t size){ // for debugging
+	void* ret = realloc_aligned(ptr, size, 16);
+	//memset(ret, 0x0, size);
+	return ret;
+}
 void S4_free(void *ptr){
 	free_aligned(ptr);
 }

@@ -45,7 +45,26 @@ void *malloc_aligned(size_t size, size_t alignment){
 
 	ptr = (void*)( ((malloc_aligned_ULONG_PTR)pa+sizeof(void*)+alignment-1)&~(alignment-1) );
 	*((void **)ptr-1) = pa;
-	
+
+	return ptr;
+#endif
+}
+
+// size : the size of allocated memory
+//        The actual size of allocation will be greater than this size.
+// alignment : the alignment boundary
+void *realloc_aligned(void *ptr, size_t size, size_t alignment){
+#ifdef WIN32
+	return (void*)_aligned_realloc(ptr, size, alignment);
+#else
+	void *pa;
+
+	pa = realloc((void**)ptr-1, (size+alignment-1)+sizeof(void*));
+	if(!pa){ return NULL; }
+
+	ptr = (void*)( ((malloc_aligned_ULONG_PTR)pa+sizeof(void*)+alignment-1)&~(alignment-1) );
+	*((void **)ptr-1) = pa;
+
 	return ptr;
 #endif
 }
