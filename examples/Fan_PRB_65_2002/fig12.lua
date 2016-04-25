@@ -3,9 +3,7 @@
 -- "Analysis of guided resonances in photonic crystal slabs",
 -- Phys. Rev. B, Vol. 65, 235112
 
-S = S4.NewSimulation()
-S:SetLattice({1,0}, {0,1})
-S:SetNumG(100)
+S = S4.NewSimulation{ lattice = { {1,0}, {0,1} }, basis_size = 100 }
 S:AddMaterial("Silicon", {12,0}) -- real and imag parts
 S:AddMaterial("Vacuum", {1,0})
 
