@@ -245,8 +245,14 @@ void Simulation_Destroy(Simulation *S){
 	if(NULL != S->solution){
 		Simulation_DestroySolution(S);
 	}
-	S4_free(S->layer);
-	S4_free(S->material);
+	for(int i = 0; i < S->n_layers; ++i){
+		Layer_Destroy(&S->layer[i]);
+	}
+	free(S->layer);
+	for(int i = 0; i < S->n_materials; ++i){
+		Material_Destroy(&S->material[i]);
+	}
+	free(S->material);
 	Simulation_SetExcitationType(S, -1);
 	Simulation_InvalidateFieldCache(S);
 	if(NULL != S->options.vector_field_dump_filename_prefix){
@@ -647,7 +653,7 @@ int Simulation_AddLayerPatternPolygon(
 // 16 - invalid 1D layer patterning
 int Simulation_InitSolution(Simulation *S){
 	S4_TRACE("> Simulation_InitSolution(S=%p) [omega=%f]\n", S, S->omega[0]);
-	int layer_count, i;
+	int i;
 	Solution *sol;
 	if(NULL == S){
 		S4_TRACE("< Simulation_InitSolution (failed; S == NULL) [omega=%f]\n", S->omega[0]);
@@ -685,7 +691,7 @@ int Simulation_InitSolution(Simulation *S){
 			}
 		}else{
 			// check that no duplicate names exist
-			for(int j = 0; j < S->n_layers; ++j){
+			for(int j = 0; j < i; ++j){
 				const Layer *L2 = &(S->layer[j]);
 				if(0 == strcmp(L2->name, L->name)){
 					S4_TRACE("< Simulation_InitSolution (failed; layer name %s appears more than once) [omega=%f]\n", L->name, S->omega[0]);
@@ -811,8 +817,8 @@ int Simulation_GetLayerSolution(Simulation *S, Layer *layer, LayerBands **layer_
 
 	LayerBands** Lbands = (LayerBands**)sol->layer_bands;
 	LayerSolution** Lsoln = (LayerSolution**)sol->layer_solution;
-	Layer *L = S->layer;
-	while(NULL != L){
+	for(int i = 0; i < S->n_layers; ++i){
+		Layer *L = &(S->layer[i]);
 		if(L == layer){
 			if(NULL == *Lsoln){
 				error = Simulation_ComputeLayerSolution(S, L, layer_bands, layer_solution);
@@ -977,7 +983,7 @@ int Simulation_ComputeLayerSolution(Simulation *S, Layer *L, LayerBands **layer_
 			RNP::LinearSolve<'N'>(n2,1, phicopy,n2, a0,n2, NULL, NULL);
 		}
 
-		S4_TRACE("I  Calling SolveInterior(layer_count=%d, which_layer=%d, n=%d, lthick,lq,lkp,lphi={\n", layer_count, which_layer, S->n_G);
+		S4_TRACE("I  Calling SolveInterior(layer_count=%d, which_layer=%d, n=%d, lthick,lq,lkp,lphi={\n", S->n_layers, which_layer, S->n_G);
 		for(int i = 0; i < S->n_layers; ++i){
 			S4_TRACE("I    %f, %p (0,0=%f,%f), %p (0,0=%f,%f), %p (0,0=%f,%f)\n", lthick[i],
 				lq[i], lq[i][0].real(), lq[i][0].imag(),
@@ -1024,7 +1030,7 @@ int Simulation_ComputeLayerSolution(Simulation *S, Layer *L, LayerBands **layer_
 			}
 		}
 
-		S4_TRACE("I  Calling SolveInterior(layer_count=%d, which_layer=%d, n=%d, lthick,lq,lkp,lphi={\n", layer_count, which_layer, S->n_G);
+		S4_TRACE("I  Calling SolveInterior(layer_count=%d, which_layer=%d, n=%d, lthick,lq,lkp,lphi={\n", S->n_layers, which_layer, S->n_G);
 		for(size_t i = 0; i < S->n_layers; ++i){
 			S4_TRACE("I    %f, %p (0,0=%f,%f), %p (0,0=%f,%f), %p (0,0=%f,%f)\n", lthick[i],
 				lq[i], lq[i][0].real(), lq[i][0].imag(),
