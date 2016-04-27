@@ -124,6 +124,7 @@ void Layer_Init(Layer *L, const char *name, double thickness, const char *materi
 	L->pattern.nshapes = 0;
 	L->pattern.shapes = NULL;
 	L->pattern.parent = NULL;
+	L->bands = NULL;
 	S4_TRACE("< Layer_Init\n");
 }
 void Layer_Destroy(Layer *L){
@@ -137,6 +138,10 @@ void Layer_Destroy(Layer *L){
 	if(NULL != L->copy){ free(L->copy); L->copy = NULL; }
 	if(NULL != L->pattern.shapes){ free(L->pattern.shapes); L->pattern.shapes = NULL; }
 	if(NULL != L->pattern.parent){ free(L->pattern.parent); L->pattern.parent = NULL; }
+	if(NULL != L->bands && NULL != L->copy){
+		if(NULL != L->bands->q){ free(L->bands->q); }
+		free(L->bands);
+	}
 	S4_TRACE("< Layer_Destroy\n");
 }
 void Material_Init(Material *M, const char *name, const double eps[2]){
@@ -203,7 +208,7 @@ void Simulation_Init(Simulation *S, const double *Lr, int nG, int *G){
 	S->material = (Material*)malloc(sizeof(Material) * S->n_materials_alloc);
 	S->n_layers = 0;
 	S->n_layers_alloc = 4;
-	S->layer = (Layer*)malloc(sizeof(Layer*) * S->n_layers_alloc);
+	S->layer = (Layer*)malloc(sizeof(Layer) * S->n_layers_alloc);
 	S->omega[0] = 1;
 	S->omega[1] = 0;
 	S->k[0] = 0;
@@ -309,6 +314,7 @@ void Simulation_Clone(const Simulation *S, Simulation *T){
 		L2->pattern.shapes = (shape*)malloc(sizeof(shape)*L->pattern.nshapes);
 		memcpy(L2->pattern.shapes, L->pattern.shapes, sizeof(shape)*L->pattern.nshapes);
 		L2->pattern.parent = NULL;
+		L2->bands = NULL;
 	}
 
 	T->n_materials = S->n_materials;
@@ -410,6 +416,12 @@ Layer* Simulation_AddLayer(Simulation *S){
 	S4_TRACE("< Simulation_AddLayer (returning L=%p) [omega=%f]\n", L, S->omega[0]);
 	return L;
 }
+void Simulation_DestroyLayerBands(Layer *layer){
+	if(NULL != layer->bands){
+		if(NULL != layer->bands->q){ free(layer->bands->q); }
+		free(layer->bands);
+	}
+}
 int Simulation_RemoveLayerPatterns(Simulation *S, Layer *layer){
 	S4_TRACE("> Simulation_RemoveLayerPatterns(S=%p, layer=%p) [omega=%f]\n",
 		S, layer, S->omega[0]);
@@ -432,6 +444,7 @@ int Simulation_RemoveLayerPatterns(Simulation *S, Layer *layer){
 		free(layer->pattern.parent);
 		layer->pattern.parent = NULL;
 	}
+	Simulation_DestroyLayerBands(layer);
 
 	S4_TRACE("< Simulation_RemoveLayerPatterns [omega=%f]\n", S->omega[0]);
 	return 0;
@@ -494,6 +507,7 @@ int Simulation_AddLayerPatternCircle(
 		return ret;
 	}
 
+	Simulation_DestroyLayerBands(layer);
 	Simulation_DestroySolution(S);
 	Simulation_InvalidateFieldCache(S);
 
@@ -535,6 +549,7 @@ int Simulation_AddLayerPatternEllipse(
 		return ret;
 	}
 
+	Simulation_DestroyLayerBands(layer);
 	Simulation_DestroySolution(S);
 	Simulation_InvalidateFieldCache(S);
 
@@ -579,6 +594,7 @@ int Simulation_AddLayerPatternRectangle(
 		return ret;
 	}
 
+	Simulation_DestroyLayerBands(layer);
 	Simulation_DestroySolution(S);
 	Simulation_InvalidateFieldCache(S);
 
@@ -624,6 +640,7 @@ int Simulation_AddLayerPatternPolygon(
 		return ret;
 	}
 
+	Simulation_DestroyLayerBands(layer);
 	Simulation_DestroySolution(S);
 	Simulation_InvalidateFieldCache(S);
 
@@ -746,14 +763,13 @@ int Simulation_InitSolution(Simulation *S){
 		return 1;
 	}
 	sol = S->solution;
-	sol->layer_bands = (void**)S4_malloc(sizeof(void*)*2*S->n_layers);
-	if(NULL == sol->layer_bands){
-		S4_TRACE("< Simulation_InitSolution (failed; could not allocate sol->layer_bands) [omega=%f]\n", S->omega[0]);
+	sol->layer_solution = (void**)S4_malloc(sizeof(void*)*S->n_layers);
+	if(NULL == sol->layer_solution){
+		S4_TRACE("< Simulation_InitSolution (failed; could not allocate sol->layer_solution) [omega=%f]\n", S->omega[0]);
 		return 1;
 	}
-	sol->layer_solution = sol->layer_bands + S->n_layers;
-	for(i = 0; i < 2*S->n_layers; ++i){
-		sol->layer_bands[i] = NULL;
+	for(i = 0; i < S->n_layers; ++i){
+		sol->layer_solution[i] = NULL;
 	}
 
 	S4_TRACE("I  Simulation_InitSolution G: (%d) [omega=%f]\n", S->n_G, S->omega[0]);
@@ -793,7 +809,6 @@ int Simulation_GetLayerSolution(Simulation *S, Layer *layer, LayerBands **layer_
 	}
 	sol = S->solution;
 
-	LayerBands** Lbands = (LayerBands**)sol->layer_bands;
 	LayerSolution** Lsoln = (LayerSolution**)sol->layer_solution;
 	for(int i = 0; i < S->n_layers; ++i){
 		Layer *L = &(S->layer[i]);
@@ -805,16 +820,16 @@ int Simulation_GetLayerSolution(Simulation *S, Layer *layer, LayerBands **layer_
 					return 2;
 				}
 				if(NULL == L->copy){
-					*Lbands = *layer_bands;
+					L->bands = *layer_bands;
 				}
 				*Lsoln = *layer_solution;
 			}else{
 				if(NULL != L->copy){
 					int refi = 0;
 					Simulation_GetLayerByName(S, L->copy, &refi);
-					*layer_bands = (LayerBands*)sol->layer_bands[refi];
+					*layer_bands = S->layer[refi].bands;
 				}else{
-					*layer_bands = *Lbands;
+					*layer_bands = L->bands;
 				}
 				*layer_solution = *Lsoln;
 			}
@@ -822,7 +837,6 @@ int Simulation_GetLayerSolution(Simulation *S, Layer *layer, LayerBands **layer_
 			S4_TRACE("< Simulation_GetLayerSolution [omega=%f]\n", S->omega[0]);
 			return 0;
 		}
-		++Lbands;
 		++Lsoln;
 	}
 
@@ -881,14 +895,13 @@ int Simulation_ComputeLayerSolution(Simulation *S, Layer *L, LayerBands **layer_
 
 	// compute all bands and then get solution
 	Solution *sol = S->solution;
-	LayerBands **Lbands = (LayerBands**)sol->layer_bands;
 	LayerSolution **Lsoln = (LayerSolution**)sol->layer_solution;
 	int which_layer = 0;
 	bool found_layer = false;
 	for(int i = 0; i < S->n_layers; ++i){
 		Layer *SL = &(S->layer[i]);
-		if(NULL == *Lbands && NULL == SL->copy){
-			Simulation_ComputeLayerBands(S, SL, Lbands);
+		if(NULL == SL->bands && NULL == SL->copy){
+			Simulation_ComputeLayerBands(S, SL, &SL->bands);
 		}
 		if(L == SL){
 			found_layer = true;
@@ -897,14 +910,13 @@ int Simulation_ComputeLayerSolution(Simulation *S, Layer *L, LayerBands **layer_
 			if(NULL != SL->copy){
 				int refi = 0;
 				Simulation_GetLayerByName(S, SL->copy, &refi);
-				*layer_bands = (LayerBands*)sol->layer_bands[refi];
+				*layer_bands = S->layer[refi].bands;
 			}else{
-				*layer_bands = *Lbands;
+				*layer_bands = SL->bands;
 			}
 			*layer_solution = *Lsoln;
 			(*layer_solution)->ab = (std::complex<double>*)S4_malloc(sizeof(std::complex<double>)*n4);
 		}
-		++Lbands;
 		++Lsoln;
 	}
 	if(!found_layer){
@@ -924,7 +936,6 @@ int Simulation_ComputeLayerSolution(Simulation *S, Layer *L, LayerBands **layer_
 	const std::complex<double> **lkp  = lepsinv  + S->n_layers;
 	const std::complex<double> **lphi = lkp + S->n_layers;
 
-	Lbands = (LayerBands**)sol->layer_bands;
 	for(int i = 0; i < S->n_layers; ++i){
 		Layer *SL = &(S->layer[i]);
 		int refi = i;
@@ -932,11 +943,11 @@ int Simulation_ComputeLayerSolution(Simulation *S, Layer *L, LayerBands **layer_
 		if(NULL != SL->copy){
 			Simulation_GetLayerByName(S, SL->copy, &refi);
 		}
-		lq  [i] = Lbands[refi]->q;
-		lepsinv [i] = Lbands[refi]->Epsilon_inv;
-		lepstype[i] = Lbands[refi]->epstype;
-		lkp [i] = Lbands[refi]->kp;
-		lphi[i] = Lbands[refi]->phi;
+		lq  [i] = S->layer[refi].bands->q;
+		lepsinv [i] = S->layer[refi].bands->Epsilon_inv;
+		lepstype[i] = S->layer[refi].bands->epstype;
+		lkp [i] = S->layer[refi].bands->kp;
+		lphi[i] = S->layer[refi].bands->phi;
 	}
 
 	// Compose the RCWA solution
@@ -1050,7 +1061,7 @@ int Simulation_ComputeLayerSolution(Simulation *S, Layer *L, LayerBands **layer_
 			ab[3*n+i] = -J0[0]*phase; //  -jx
 		}
 		// Make eta*jz
-		RNP::TBLAS::MultMV<'N'>(n,n, 1.,Lbands[li]->Epsilon_inv,n, &ab[0*n],1, 0.,&ab[1*n],1);
+		RNP::TBLAS::MultMV<'N'>(n,n, 1.,S->layer[li].bands->Epsilon_inv,n, &ab[0*n],1, 0.,&ab[1*n],1);
 		RNP::TBLAS::Copy(n, &ab[1*n],1, &ab[0*n],1);
 		// finish ab[0*n] and ab[1*n]
 		for(int i = 0; i < n; ++i){
@@ -1493,25 +1504,23 @@ int Simulation_GetPropagationConstants(Simulation *S, Layer *L, double *q){
 	sol = S->solution;
 
 	// compute all bands and then get solution;
-	LayerBands **Lbands = (LayerBands**)sol->layer_bands;
 	LayerBands *layer_bands;
 	bool found_layer = false;
 	for(int i = 0; i < S->n_layers; ++i){
 		Layer *SL = &(S->layer[i]);
-		if(NULL == *Lbands && NULL == SL->copy){
-			Simulation_ComputeLayerBands(S, SL, Lbands);
+		if(NULL == SL->bands && NULL == SL->copy){
+			Simulation_ComputeLayerBands(S, SL, &SL->bands);
 		}
 		if(L == SL){
 			found_layer = true;
 			if(NULL != SL->copy){
 				int refi = 0;
 				Simulation_GetLayerByName(S, SL->copy, &refi);
-				layer_bands = (LayerBands*)sol->layer_bands[refi];
+				layer_bands = S->layer[refi].bands;
 			}else{
-				layer_bands = *Lbands;
+				layer_bands = SL->bands;
 			}
 		}
-		++Lbands;
 	}
 	if(!found_layer){
 		S4_TRACE("< Simulation_GetPropagationConstants (failed; could not find layer) [omega=%f]\n", S->omega[0]);
@@ -1590,21 +1599,10 @@ void Simulation_DestroySolution(Simulation *S){
 		S4_TRACE("< Simulation_DestroySolution (early exit; sol == NULL) [omega=%f]\n", S->omega[0]);
 		return;
 	}
-	if(NULL != sol->layer_bands){
-		void **Lbands = sol->layer_bands;
+	if(NULL != sol->layer_solution){
 		void **Lsoln = sol->layer_solution;
 		for(int i = 0; i < S->n_layers; ++i){
 			Layer *L = &(S->layer[i]);
-			// release Lbands
-			if(NULL != Lbands){
-				LayerBands *pB = (LayerBands*)(*Lbands);
-				if(NULL != pB){
-					if(NULL != pB->q){
-						S4_free(pB->q);
-					}
-					S4_free(pB);
-				}
-			}
 			// release Lsoln
 			if(NULL != Lsoln){
 				LayerSolution *pS = (LayerSolution*)(*Lsoln);
@@ -1615,11 +1613,9 @@ void Simulation_DestroySolution(Simulation *S){
 					S4_free(pS);
 				}
 			}
-			++Lbands;
 			++Lsoln;
 		}
-		S4_free(sol->layer_bands);
-		sol->layer_bands = NULL;
+		S4_free(sol->layer_solution);
 		sol->layer_solution = NULL;
 	}
 	S4_free(S->solution); S->solution = NULL;
@@ -1640,7 +1636,7 @@ void Simulation_DestroyLayerSolutions(Simulation *S){
 		return;
 	}
 
-	if(NULL != sol->layer_bands){
+	if(NULL != sol->layer_solution){
 		void **Lsoln = sol->layer_solution;
 		for(int i = 0; i < S->n_layers; ++i){
 			Layer *L = &(S->layer[i]);
@@ -2806,14 +2802,12 @@ int Simulation_GetSMatrix(Simulation *S, int from, int to, std::complex<double> 
 
 	// compute all bands
 	Solution *sol = S->solution;
-	LayerBands **Lbands = (LayerBands**)sol->layer_bands;
 	for(int i = 0; i < S->n_layers; ++i){
 		Layer *SL = &(S->layer[i]);
 		if(from <= i && (-1 == to || i <= to)){
-			if(NULL == *Lbands){
-				Simulation_ComputeLayerBands(S, SL, Lbands);
+			if(NULL == SL->bands){
+				Simulation_ComputeLayerBands(S, SL, &SL->bands);
 			}
-			++Lbands;
 		}
 	}
 
@@ -2825,16 +2819,15 @@ int Simulation_GetSMatrix(Simulation *S, int from, int to, std::complex<double> 
 	const std::complex<double> **lkp  = lepsinv  + S->n_layers;
 	const std::complex<double> **lphi = lkp + S->n_layers;
 
-	Lbands = (LayerBands**)sol->layer_bands;
 	for(int i = 0; i < S->n_layers; ++i){
 		Layer *SL = &(S->layer[i]);
 		if(from <= i && (-1 == to || i <= to)){
 			lthick[i] = SL->thickness;
-			lq  [i] = Lbands[i]->q;
-			lepsinv[i] = Lbands[i]->Epsilon_inv;
-			lepstype[i] = Lbands[i]->epstype;
-			lkp [i] = Lbands[i]->kp;
-			lphi[i] = Lbands[i]->phi;
+			lq  [i] = SL->bands->q;
+			lepsinv[i] = SL->bands->Epsilon_inv;
+			lepstype[i] = SL->bands->epstype;
+			lkp [i] = SL->bands->kp;
+			lphi[i] = SL->bands->phi;
 		}
 	}
 
