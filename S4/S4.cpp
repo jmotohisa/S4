@@ -677,7 +677,6 @@ int Simulation_AddLayerPatternPolygon(
 // 16 - invalid 1D layer patterning
 int Simulation_InitSolution(Simulation *S){
 	S4_TRACE("> Simulation_InitSolution(S=%p) [omega=%f]\n", S, S->omega[0]);
-	int i;
 	std::complex<double> *sol;
 	if(NULL == S){
 		S4_TRACE("< Simulation_InitSolution (failed; S == NULL) [omega=%f]\n", S->omega[0]);
@@ -728,8 +727,8 @@ int Simulation_InitSolution(Simulation *S){
 		}
 		// check that if we have a 1D pattern, the only shapes are rectangles
 		if(0 == S->Lr[2] && 0 == S->Lr[3]){
-			for(i = 0; i < L->pattern.nshapes; ++i){
-				if(RECTANGLE != L->pattern.shapes[i].type){
+			for(int k = 0; k < L->pattern.nshapes; ++k){
+				if(RECTANGLE != L->pattern.shapes[k].type){
 					return 16;
 				}
 			}
@@ -769,7 +768,7 @@ int Simulation_InitSolution(Simulation *S){
 	S4_TRACE("I  Simulation_InitSolution G: (%d) [omega=%f]\n", S->n_G, S->omega[0]);
 
 
-	for(i = 0; i < S->n_G; ++i){
+	for(int i = 0; i < S->n_G; ++i){
 		S->kx[i] = S->k[0]*S->omega[0] + 2*M_PI*(S->Lk[0]*S->G[2*i+0] + S->Lk[2]*S->G[2*i+1]);
 		S->ky[i] = S->k[1]*S->omega[0] + 2*M_PI*(S->Lk[1]*S->G[2*i+0] + S->Lk[3]*S->G[2*i+1]);
 	}
