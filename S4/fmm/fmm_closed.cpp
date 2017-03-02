@@ -74,6 +74,7 @@ int FMMGetEpsilon_ClosedForm(const S4_Simulation *S, const S4_Layer *L, const in
 
 	const double unit_cell_size = Simulation_GetUnitCellSize(S);
 
+	// calculate \hat{epsilon}=epsilon,Epsilon2=[[epsilon,0],[0,0]]
 	if(!have_tensor){
 		// Make Epsilon
 		for(int j = 0; j < n; ++j){
@@ -106,6 +107,7 @@ int FMMGetEpsilon_ClosedForm(const S4_Simulation *S, const S4_Layer *L, const in
 		}
 		S4_TRACE("I  Epsilon(0,0) = %f,%f [omega=%f]\n", Epsilon2[0].real(), Epsilon2[0].imag(), S->omega[0]);
 
+		// calculate \hat{eta}=eta,Epsilon_inv=[[eta,0],[0,0]]
 		if(!S->options.use_polarization_basis){ // ordinary Laurent's rule
 			if(0 == S->Lr[2] && 0 == S->Lr[3]){ // 1D proper FFF rule
 				for(int j = 0; j < n; ++j){
@@ -125,22 +127,22 @@ int FMMGetEpsilon_ClosedForm(const S4_Simulation *S, const S4_Layer *L, const in
 						Epsilon_inv[i+j*n] = std::complex<double>(ft[0],ft[1]);
 					}
 				}
-				RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., &Epsilon2[n+n*n2],n2);
-				RNP::LinearSolve<'N'>(n,n, Epsilon_inv,n, &Epsilon2[n+n*n2],n2, NULL, NULL);
-				RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., Epsilon_inv,n);
+				RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., &Epsilon2[n+n*n2],n2);// Epsilon2=[[epsilon,0],[0,I]]
+				RNP::LinearSolve<'N'>(n,n, Epsilon_inv,n, &Epsilon2[n+n*n2],n2, NULL, NULL);//Epsilon2=[[epsilon,0],[0,eta^{-1}]]
+				RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., Epsilon_inv,n); 
 				RNP::TBLAS::CopyMatrix<'A'>(n,n,&Epsilon2[0+0*n2],n2, &Epsilon2[n+0*n2],n2); // use lower block for temp storage; will be cleaned up later
 				RNP::LinearSolve<'N'>(n,n, &Epsilon2[n+0*n2],n2, Epsilon_inv,n, NULL, NULL);
 			}else{
 				// Upper block of diagonal of Epsilon2 is already Epsilon
-				RNP::TBLAS::CopyMatrix<'A'>(n,n,&Epsilon2[0+0*n2],n2, &Epsilon2[n+n*n2],n2);
-				RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., Epsilon_inv,n);
-				RNP::LinearSolve<'N'>(n,n, &Epsilon2[0+0*n2],n2, Epsilon_inv,n, NULL, NULL);
-				RNP::TBLAS::CopyMatrix<'A'>(n,n,&Epsilon2[n+n*n2],n2, &Epsilon2[0+0*n2],n2);
+			  RNP::TBLAS::CopyMatrix<'A'>(n,n,&Epsilon2[0+0*n2],n2, &Epsilon2[n+n*n2],n2);//Epsilon2=[[epsilon,0,],[0,epslon2]]
+			  RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., Epsilon_inv,n);//
+			  RNP::LinearSolve<'N'>(n,n, &Epsilon2[0+0*n2],n2, Epsilon_inv,n, NULL, NULL);// Epsilon_inv=[[epsilon^-1,0],[0,0]]
+			  RNP::TBLAS::CopyMatrix<'A'>(n,n,&Epsilon2[n+n*n2],n2, &Epsilon2[0+0*n2],n2);// Epsilon_inv=[[epsilon^-1,0],[0,epsilon^-1]]
 			}
 		}else{
 			// Upper block of diagonal of Epsilon2 is already Epsilon
-			RNP::TBLAS::CopyMatrix<'A'>(n,n,&Epsilon2[0+0*n2],n2, &Epsilon2[n+n*n2],n2);
-			// Make Epsilon_inv
+		  RNP::TBLAS::CopyMatrix<'A'>(n,n,&Epsilon2[0+0*n2],n2, &Epsilon2[n+n*n2],n2);// Epsilon2[[epsilon,0],[0,epsilon]]
+			// Make Epsilon_inv// Epsilon_inv=[[eta,?],[?,?]]
 			for(int j = 0; j < n; ++j){
 				for(int i = 0; i < n; ++i){
 					int dG[2] = {G[2*i+0]-G[2*j+0],G[2*i+1]-G[2*j+1]};
@@ -159,8 +161,8 @@ int FMMGetEpsilon_ClosedForm(const S4_Simulation *S, const S4_Layer *L, const in
 				}
 			}
 		}
-		RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,0., &Epsilon2[n+0*n2],n2);
-		RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,0., &Epsilon2[0+n*n2],n2);
+		RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,0., &Epsilon2[n+0*n2],n2);//Epsilon2=[[?,0],[?,?]]
+		RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,0., &Epsilon2[0+n*n2],n2);//Epsilon2=[[?,0],[0,?]]
 		// Epsilon2 has Epsilon's on its diagonal
 	}else{ // have tensor dielectric
 		const int ldv = 2*(1+L->pattern.nshapes);

@@ -1,0 +1,82 @@
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+# JM added
+*.Po
+Makefile.in
+Makefile
+ltmain.sh
+config.log
+config.guess
+config.status
+configure
+ltmain.sh
+m4
+main.c
+geom.c
+geom.h
+config.h
+config.h.in
+ctl-io.c
+ctl-io.h
+pcsmatrix.scm
+pcsmatrix_libctl
+stamp-h1
+autom4te.cache
+aclocal.m4
+libtool
+compile
+config.sub
+depcomp
+install-sh
+missing
+doxygen
