@@ -6,8 +6,8 @@ LUA_INC = -I/Users/motohisa/working/lua-5.3.3/src
 LUA_LIB = -L/Users/motohisa/working/lua-5.3.3/src -llua
 LUA_MODULE_LIB =
 
-CFLAGS += -O0 -Wall -g
-CXXFLAGS += -O0 -Wall -std=c++11 -g
+CFLAGS += -O0 -Wall -g3
+CXXFLAGS += -O0 -Wall -std=c++11 -g3 -DHAVE_LIBFFTW3 -ggdb
 
 CC = cc
 CXX = c++

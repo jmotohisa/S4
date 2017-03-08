@@ -1,5 +1,6 @@
 S = S4.NewSimulation()
-S:SetLattice({1,0}, {0.5,0.5*math.sqrt(3)})
+-- S:SetLattice({1,0}, {0.5,0.5*math.sqrt(3)})
+S:SetLattice({0.5,-0.5*math.sqrt(3)}, {0.5,0.5*math.sqrt(3)})
 S:SetNumG(17)
 S:AddMaterial("Silicon", {12,0}) -- real and imag parts
 S:AddMaterial("Vacuum", {1,0})

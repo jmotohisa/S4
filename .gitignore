@@ -53,7 +53,6 @@ dkms.conf
 # JM added
 *.Po
 Makefile.in
-Makefile
 ltmain.sh
 config.log
 config.guess
