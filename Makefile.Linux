@@ -1,16 +1,16 @@
 OBJDIR = build
 SHLIB_EXT = so
 SHLIB_FLAGS = -fPIC -shared
-LA_LIBS = -llapack -lblas
-LUA_INC = -I/usr/include/lua5.2
-LUA_LIB = -llua5.2
+LA_LIBS = -llapack -lblas -DHAVE_BLAS
+LUA_INC = -I/home/motohisa/work/lua-5.3.3/install/include
+LUA_LIB = -L/home/motohisa/work/lua-5.3.3/install/lib -llua -Wl,-E -ldl 
 LUA_MODULE_LIB =
 
 MPI_INC =
 MPI_LIB =
 
-CFLAGS   += -O3 -Wall -march=native -fcx-limited-range -fno-exceptions -fPIC
-CXXFLAGS += -O3 -Wall -march=native -fcx-limited-range -fno-exceptions -fPIC
+CFLAGS   += -O0 -Wall -march=native -fcx-limited-range -fno-exceptions -fPIC -g -DHAVE_BLAS -DENABLE_S4_TRACE
+CXXFLAGS += -O0 -Wall -march=native -fcx-limited-range -fno-exceptions -fPIC -g -DHAVE_BLAS -DENABLE_S4_TRACE
 
 # If compiling with MPI, the following must be modified to the proper MPI compilers
 CC = gcc

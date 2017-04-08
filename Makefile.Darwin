@@ -2,6 +2,7 @@ OBJDIR = build
 SHLIB_EXT = so
 SHLIB_FLAGS = -bundle -undefined dynamic_lookup
 LA_LIBS = -framework Accelerate
+# LA_LIBS = -DHAVE_BLAS -framework Accelerate
 LUA_INC = -I/Users/motohisa/working/lua-5.3.3/src -I/opt/local/include
 LUA_LIB = -L/Users/motohisa/working/lua-5.3.3/src -llua -L/opt/local/lib -lfftw3
 LUA_MODULE_LIB =
