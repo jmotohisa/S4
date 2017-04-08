@@ -5,7 +5,8 @@
 -- This is Fig. 7, curve OCA
 
 S = S4.NewSimulation()
-S:SetLattice({1,0}, {0.5,0.5*math.sqrt(3)})
+-- nS:SetLattice({1,0}, {0.5,0.5*math.sqrt(3)})
+S:SetLattice({0.5,-0.5*math.sqrt(3)}, {0.5,0.5*math.sqrt(3)})
 S:SetNumG(100)
 S:AddMaterial("Dielectric", {2.56,0}) -- real and imag parts
 S:AddMaterial("Vacuum", {1,0})
@@ -24,11 +25,10 @@ S:SetFrequency(2.0000001)
 
 --if     "original" == S4.arg then
 --elseif "new" == S4.arg then
---		S:UsePolarizationDecomposition()
---elseif "normal" == S4.arg then
 		S:UsePolarizationDecomposition()
+--elseif "normal" == S4.arg then
+--		S:UsePolarizationDecomposition()
 --		S:UseNormalVectorBasis()
---		S:SetBasisFieldDumpPrefix('test')
 --elseif "complex" == S4.arg then
 --		S:UsePolarizationDecomposition()
 --		S:UseJonesVectorBasis()
@@ -47,8 +47,6 @@ end
 for ng = 41,401,40 do
 	S:SetNumG(ng)
 	power_inc = S:GetPoyntingFlux('StuffAbove', 0)
-	forward,backward = S:GetPoyntingFlux('StuffAbove', 0)
-	forward = S:GetPoyntingFlux('StuffBelow', 0)
 	G = S:GetGList()
 	Gi = 1
 	for i,g in ipairs(G) do
@@ -62,8 +60,6 @@ for ng = 41,401,40 do
 
 	print(S:GetNumG(), P[Gi][1]/power_inc, P[Gi][2]/power_inc)
 	io.stdout:flush()
-	
-	print ('\t' .. forward .. '\t' .. backward)
 end
 
 --Lk = S:GetReciprocalLattice()

@@ -79,3 +79,4 @@ depcomp
 install-sh
 missing
 doxygen
+build

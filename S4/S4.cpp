@@ -3468,6 +3468,7 @@ int S4_Simulation_ExcitationPlanewave(
 }
 
 int S4_Simulation_GetFieldPlane(S4_Simulation *S, const int nxy[2], const S4_real *xyz0, S4_real *E, S4_real *H){
+  double r0[3];
 	S4_TRACE("> S4_Simulation_GetFieldPlane(S=%p, nxy=%p (%d,%d), r0=(%f,%f,%f), E=%p, H=%p)\n",
 		S, nxy, (NULL == nxy ? 0 : nxy[0]), (NULL == nxy ? 0 : nxy[1]), r0[0], r0[1], r0[2], E, H);
 	if(NULL == S){

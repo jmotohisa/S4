@@ -10,7 +10,8 @@
 #   SHLIB_EXT (so, dll)
 #   SHLIB_FLAGS
 
-CPPFLAGS += -g -O0 -IS4 -IS4/RNP -IS4/kiss_fft
+CPPFLAGS += -g3 -O0 -IS4 -IS4/RNP -IS4/kiss_fft
+# CPPFLAGS += -IS4 -IS4/RNP -IS4/kiss_fft
 
 #### Compilation targets
 
