@@ -31,6 +31,13 @@
 #endif
 #include "fmm.h"
 
+#ifdef DUMP_MATRICES
+# define RNP_OUTPUT_MATHEMATICA
+# define DUMP_STREAM std::cerr
+//# define DUMP_STREAM (omega.real() > 1.91637 ? std::cerr : std::cout)
+# include <IO.h>
+#endif
+
 #include <limits>
 //#include <kiss_fft.h>
 //#include <tools/kiss_fftnd.h>
@@ -212,6 +219,49 @@ int FMMGetEpsilon_PolBasisJones(const S4_Simulation *S, const S4_Layer *L, const
 			}
 		}
 
+#ifdef DUMP_MATRICES
+		double *vfx0 = (double*)S4_malloc(sizeof(double)*ng2);
+		double *vfy0 = (double*)S4_malloc(sizeof(double)*ng2);
+		std::complex<double> *vfxc = (std::complex<double>*)S4_malloc(sizeof(std::complex<double>)*ng2);
+		std::complex<double> *vfyc = (std::complex<double>*)S4_malloc(sizeof(std::complex<double>)*ng2);
+		for(int i=0;i<ng2;i++)
+		  {
+			*(vfx0+i)=*(vfield+i*2+0);
+			*(vfy0+i)=*(vfield+i*2+1);
+			*(vfxc+i)=*(par+i*2+0);
+			*(vfyc+i)=*(par+i*2+1);
+		  }
+		
+	DUMP_STREAM << "vfx0:" << std::endl;
+# ifdef DUMP_MATRICES_LARGE
+	RNP::IO::PrintMatrix(ngrid[0],ngrid[1],vfx0,ngrid[0], DUMP_STREAM) << std::endl << std::endl;
+# else
+	RNP::IO::PrintVector(ngrid[0],vfx0,1, DUMP_STREAM) << std::endl << std::endl;
+# endif
+	DUMP_STREAM << "vfy0:" << std::endl;
+# ifdef DUMP_MATRICES_LARGE
+	RNP::IO::PrintMatrix(ngrid[0],ngrid[1],vfy0,ngrid[0], DUMP_STREAM) << std::endl << std::endl;
+# else
+	RNP::IO::PrintVector(ngrid[0],vfy0,1, DUMP_STREAM) << std::endl << std::endl;
+# endif
+	DUMP_STREAM << "vfxc:" << std::endl;
+# ifdef DUMP_MATRICES_LARGE
+	RNP::IO::PrintMatrix(ngrid[0],ngrid[1],vfxc,ngrid[0], DUMP_STREAM) << std::endl << std::endl;
+# else
+	RNP::IO::PrintVector(ngrid[0],vfxc,1, DUMP_STREAM) << std::endl << std::endl;
+# endif
+	DUMP_STREAM << "vfyc:" << std::endl;
+# ifdef DUMP_MATRICES_LARGE
+	RNP::IO::PrintMatrix(ngrid[0],ngrid[1],vfyc,ngrid[0], DUMP_STREAM) << std::endl << std::endl;
+# else
+	RNP::IO::PrintVector(ngrid[0],vfyc,1, DUMP_STREAM) << std::endl << std::endl;
+# endif
+	S4_free(vfx0);
+	S4_free(vfy0);
+	S4_free(vfxc);
+	S4_free(vfyc);
+#endif
+
 		if(NULL != S->options.vector_field_dump_filename_prefix){
 			const char *layer_name = NULL != L->name ? L->name : "";
 			const size_t prefix_len = strlen(S->options.vector_field_dump_filename_prefix);
@@ -326,9 +376,26 @@ int FMMGetEpsilon_PolBasisJones(const S4_Simulation *S, const S4_Layer *L, const
 		fft_plan_destroy(plan);
 		if(NULL != vfield){ S4_free(vfield); }
 
-		// do LU decomposition on P
-		RNP::TLASupport::LUDecomposition(n2,n2, P,n2, ipiv);
+#ifdef DUMP_MATRICES
+	DUMP_STREAM << "P:" << std::endl;
+# ifdef DUMP_MATRICES_LARGE
+	RNP::IO::PrintMatrix(n2,n2,P,n2, DUMP_STREAM) << std::endl << std::endl;
+# else
+	RNP::IO::PrintVector(n2,P,1, DUMP_STREAM) << std::endl << std::endl;
+#endif
+#endif
 
+	// do LU decomposition on P
+	RNP::TLASupport::LUDecomposition(n2,n2, P,n2, ipiv);
+
+#ifdef DUMP_MATRICES
+	DUMP_STREAM << "P_LUDECOMP:" << std::endl;
+# ifdef DUMP_MATRICES_LARGE
+	RNP::IO::PrintMatrix(n2,n2,P,n2, DUMP_STREAM) << std::endl << std::endl;
+# else
+	RNP::IO::PrintVector(n2,P,1, DUMP_STREAM) << std::endl << std::endl;
+#endif
+#endif
 		// Add to cache (assume that ipiv is immediately after P
 		Simulation_AddFieldToCache((S4_Simulation*)S, L, S->n_G, P, 4*nn+2*n);
 	}else{
@@ -357,6 +424,7 @@ int FMMGetEpsilon_PolBasisJones(const S4_Simulation *S, const S4_Layer *L, const
 			Eta[i+j*n] = std::complex<double>(ft[0],ft[1]);
 		}
 	}
+
 	RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., &Epsilon2[n+n*n2],n2);
 	RNP::LinearSolve<'N'>(n,n, Eta,n, &Epsilon2[n+n*n2],n2, NULL, NULL);
 
