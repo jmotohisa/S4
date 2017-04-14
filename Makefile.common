@@ -34,7 +34,7 @@ S4_LIBOBJS = \
 	$(OBJDIR)/S4k/fmm_closed.o \
 	$(OBJDIR)/S4k/fmm_PolBasisNV.o \
 	$(OBJDIR)/S4k/fmm_PolBasisVL.o \
-	$(OBJDIR)/S4k/fmm_PolBasisJones2.o \
+	$(OBJDIR)/S4k/fmm_PolBasisJones.o \
 	$(OBJDIR)/S4k/fmm_experimental.o \
 	$(OBJDIR)/S4k/fft_iface.o \
 	$(OBJDIR)/S4k/pattern.o \
