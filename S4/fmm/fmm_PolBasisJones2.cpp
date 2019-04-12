@@ -385,17 +385,17 @@ int FMMGetEpsilon_PolBasisJones(const S4_Simulation *S, const S4_Layer *L, const
 #endif
 #endif
 
-	// do LU decomposition on P
-	RNP::TLASupport::LUDecomposition(n2,n2, P,n2, ipiv);
+// 	// do LU decomposition on P
+// 	RNP::TLASupport::LUDecomposition(n2,n2, P,n2, ipiv);
 
-#ifdef DUMP_MATRICES
-	DUMP_STREAM << "P_LUDECOMP:" << std::endl;
-# ifdef DUMP_MATRICES_LARGE
-	RNP::IO::PrintMatrix(n2,n2,P,n2, DUMP_STREAM) << std::endl << std::endl;
-# else
-	RNP::IO::PrintVector(n2,P,1, DUMP_STREAM) << std::endl << std::endl;
-#endif
-#endif
+// #ifdef DUMP_MATRICES
+// 	DUMP_STREAM << "P_LUDECOMP:" << std::endl;
+// # ifdef DUMP_MATRICES_LARGE
+// 	RNP::IO::PrintMatrix(n2,n2,P,n2, DUMP_STREAM) << std::endl << std::endl;
+// # else
+// 	RNP::IO::PrintVector(n2,P,1, DUMP_STREAM) << std::endl << std::endl;
+// #endif
+// #endif
 		// Add to cache (assume that ipiv is immediately after P
 		Simulation_AddFieldToCache((S4_Simulation*)S, L, S->n_G, P, 4*nn+2*n);
 	}else{
@@ -424,20 +424,24 @@ int FMMGetEpsilon_PolBasisJones(const S4_Simulation *S, const S4_Layer *L, const
 			Eta[i+j*n] = std::complex<double>(ft[0],ft[1]);
 		}
 	}
+	
+	// taken from fmm_PolBasisVL
+	// mDelta will contain -Delta = inv(Eta) - Epsilon
+	// Epsilon2 still only has Epsilon along its diagonal
+	std::complex<double> *mDelta = (std::complex<double>*)S4_malloc(sizeof(std::complex<double>)*(nn));
 
-	RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., &Epsilon2[n+n*n2],n2);
-	RNP::LinearSolve<'N'>(n,n, Eta,n, &Epsilon2[n+n*n2],n2, NULL, NULL);
-
-	// P stores the LU factors of F at this point.
-	// We want:
-	// Epsilon2 <- P L U Epsilon2 inv(U) inv(L) inv(P)
-	RNP::TBLAS::MultTrM<'L','U','N','N'>(n2,n2, 1.0, P,n2, Epsilon2,n2);
-	RNP::TBLAS::SolveTrM<'R','U','N','N'>(n2,n2, 1.0, P,n2, Epsilon2,n2);
-	RNP::TBLAS::MultTrM<'L','L','N','U'>(n2,n2, 1.0, P,n2, Epsilon2,n2);
-	RNP::TBLAS::SolveTrM<'R','L','N','U'>(n2,n2, 1.0, P,n2, Epsilon2,n2);
-	RNP::TLASupport::ApplyPermutations<'L','N'>(n2,n2, Epsilon2,n2, ipiv);
-	RNP::TLASupport::ApplyPermutations<'R','I'>(n2,n2, Epsilon2,n2, ipiv);
-
+	RNP::TBLAS::SetMatrix<'A'>(n,n, 0.,1., mDelta,n);
+	RNP::LinearSolve<'N'>(n,n, Eta,n, mDelta,n, NULL, NULL);
+	for(int i = 0; i < n; ++i){
+		RNP::TBLAS::Axpy(n, std::complex<double>(-1.), &Epsilon2[0+i*n2],1, &mDelta[0+i*n],1);
+	}
+	for(int w = 0; w < 4; ++w){
+		int Erow = (w&1 ? n : 0);
+		int Ecol = (w&2 ? n : 0);
+		RNP::TBLAS::MultMM<'N','N'>(n,n,n, std::complex<double>(1.),mDelta,n, &P[Erow+Ecol*n2],n2, std::complex<double>(1.),&Epsilon2[Erow+Ecol*n2],n2);
+	}
+	S4_free(mDelta);
+	
 	if(NULL != work){ S4_free(work); }
 
 	S4_free(ivalues);

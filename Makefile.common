@@ -75,6 +75,8 @@ $(OBJDIR)/S4k/fmm_PolBasisVL.o: S4/fmm/fmm_PolBasisVL.cpp
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 $(OBJDIR)/S4k/fmm_PolBasisJones.o: S4/fmm/fmm_PolBasisJones.cpp
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
+$(OBJDIR)/S4k/fmm_PolBasisJones2.o: S4/fmm/fmm_PolBasisJones2.cpp
+	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 $(OBJDIR)/S4k/fmm_experimental.o: S4/fmm/fmm_experimental.cpp
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 $(OBJDIR)/S4k/fft_iface.o: S4/fmm/fft_iface.cpp
